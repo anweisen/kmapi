@@ -1,0 +1,14 @@
+# Git/GitHub
+.git
+.gitignore
+/.github
+
+# IDEs/Editors
+/.idea
+/.vscode
+*.iml
+.editorconfig
+
+# Docker
+Dockerfile
+docker-compose.yml
