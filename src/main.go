@@ -3,6 +3,7 @@ package main
 import (
   "github.com/gofiber/fiber/v3"
   "kmapi/src/api/cache"
+  "kmapi/src/routes"
   "os"
 )
 
@@ -11,6 +12,8 @@ func main() {
     Cache: cache.NewRedisCache(),
   }
   server := fiber.New()
+
+  server.Get("/by/gym/abi/:year", handler.HandleGetByGymAbiYear)
 
   bind, present := os.LookupEnv("BIND_ADDR")
   if !present {
