@@ -8,11 +8,14 @@ import (
 )
 
 func main() {
+  var singleFlightGroup singleflight.Group
   handler := routes.AppHandlerEmbed{
-    Cache: cache.NewRedisCache(),
+    Cache:        cache.NewRedisCache(),
+    Singleflight: &singleFlightGroup,
   }
   server := fiber.New()
 
+  server.Get("/by/gym/abi/next", handler.HandleGetByGymAbiNext)
   server.Get("/by/gym/abi/:year", handler.HandleGetByGymAbiYear)
 
   bind, present := os.LookupEnv("BIND_ADDR")

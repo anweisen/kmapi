@@ -22,7 +22,7 @@ type ByScrapeData struct {
   GymAbiYearData map[int]api.ByAbiYearData
 }
 
-func ScrapeBavaria() *ByScrapeData {
+func ScrapeBavaria() (*ByScrapeData, error) {
   c := colly.NewCollector()
 
   scrapeData := &ByScrapeData{}
@@ -277,7 +277,7 @@ func ScrapeBavaria() *ByScrapeData {
   err := c.Visit(URL)
 
   if err != nil {
-    return nil
+    return nil, err
   }
-  return scrapeData
+  return scrapeData, nil
 }

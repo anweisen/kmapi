@@ -1,7 +1,11 @@
 package routes
 
-import "kmapi/src/api/cache"
+import (
+  "golang.org/x/sync/singleflight"
+  "kmapi/src/api/cache"
+)
 
 type AppHandlerEmbed struct {
-  Cache cache.Cache
+  Cache        cache.Cache
+  Singleflight *singleflight.Group
 }
