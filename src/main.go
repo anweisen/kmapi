@@ -11,6 +11,7 @@ func main() {
   var singleFlightGroup singleflight.Group
   handler := routes.AppHandlerEmbed{
     Cache:        cache.NewRedisCache(),
+    Database:     database.NewMongoDatabase(),
     Singleflight: &singleFlightGroup,
   }
   server := fiber.New()

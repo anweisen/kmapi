@@ -5,6 +5,7 @@ import (
   "encoding/json"
   "errors"
   "github.com/redis/go-redis/v9"
+  "kmapi/src/api"
   "os"
   "time"
 )
@@ -17,6 +18,7 @@ type RedisCache struct {
 func NewRedisCache() Cache {
   client := redis.NewClient(&redis.Options{
     Addr: os.Getenv("REDIS_URL"),
+    DB:   api.GetEnvInt("REDIS_DB", 0),
   })
 
   return RedisCache{

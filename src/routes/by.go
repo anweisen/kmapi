@@ -1,9 +1,12 @@
 package routes
 
 import (
+  "errors"
   "github.com/gofiber/fiber/v3"
+  "go.mongodb.org/mongo-driver/v2/mongo"
   "kmapi/src/api"
   "kmapi/src/api/cache"
+  "kmapi/src/api/database"
   "kmapi/src/scraper"
   "strconv"
   "time"
@@ -67,11 +70,13 @@ func (app AppHandlerEmbed) HandleGetByGymAbiNext(ctx fiber.Ctx) error {
 func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData, error) {
   // 1. try cache
   // 2. scrape new data (and cache it)
-  // (3. return historical data from db)
+  // 3. return archived data from db (and cache it)
 
   var cachedData *api.ByAbiYearData
   yearStr := strconv.Itoa(year)
-  err := app.Cache.GetJson(cache.ConstructCacheKey(api.KeyBavaria, api.KeyGymnasium, api.KeyAbi, yearStr), &cachedData)
+  cacheKey := cache.ConstructCacheKey(api.KeyBavaria, api.KeyGymnasium, api.KeyAbi, yearStr)
+
+  err := app.Cache.GetJson(cacheKey, &cachedData)
   if err != nil {
     return nil, err
   }
@@ -84,7 +89,7 @@ func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData
 
   // perf: singleflight to prevent concurrent scrapes
   result, err, _ := app.Singleflight.Do(api.KeyBavaria, func() (interface{}, error) {
-    return DoScrapeBavariaAndCache(app) // data, err
+    return ScrapeBavariaAndCacheArchive(app) // data, err
   })
 
   if err != nil {
@@ -98,24 +103,33 @@ func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData
     return &abiData, nil
   }
 
-  // TODO(feat): should first check db for historical data
-  return nil, nil // TODO better error handling?
+  // check db for archived data
+  var archiveEntry database.ArchiveEntry[api.ByAbiYearData]
+  err = app.Database.FindArchiveEntry(cacheKey, &archiveEntry)
+  if errors.Is(err, mongo.ErrNoDocuments) {
+    return nil, nil // 404
+  }
+  if err != nil {
+    return nil, err
+  }
+
+  err = app.Cache.SetJson(cacheKey, &archiveEntry.Data) // cache archived data -> reduce database load
+  if err != nil {
+    return nil, err
+  }
+
+  return &archiveEntry.Data, nil
 }
 
-func DoScrapeBavariaAndCache(app AppHandlerEmbed) (*scraper.ByScrapeData, error) {
+func ScrapeBavariaAndCacheArchive(app AppHandlerEmbed) (*scraper.ByScrapeData, error) {
   data, err := scraper.ScrapeBavaria()
   if err != nil {
     return nil, err
   }
 
   for year, abiData := range data.GymAbiYearData {
-    err = app.Cache.SetJson(cache.ConstructCacheKey(api.KeyBavaria, api.KeyGymnasium, api.KeyAbi, strconv.Itoa(year)), abiData)
-    if err != nil {
-      println("Error caching data for year", year, ":", err.Error())
-      return nil, err
-    } else {
-      println("Cached data for year", year)
-    }
+    _ = app.Cache.SetJson(cache.ConstructCacheKey(api.KeyBavaria, api.KeyGymnasium, api.KeyAbi, strconv.Itoa(year)), abiData)
+    _ = app.Database.UpsertArchiveEntry(database.ConstructArchiveEntry[any](api.KeyBavaria, api.KeyGymnasium, api.KeyAbi, year, abiData))
   }
   return data, nil
 }
