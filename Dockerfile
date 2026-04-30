@@ -6,6 +6,7 @@ WORKDIR /app
 # Copy the go.mod file to the container
 COPY go.mod go.sum ./
 COPY src/ src/
+COPY static/ static/
 
 # Generate go.sum
 RUN go mod tidy
@@ -23,6 +24,7 @@ WORKDIR /app
 
 # Copy the compiled binary from the builder stage to the final stage
 COPY --from=build /app/kmapi .
+COPY --from=build /app/static/ ./static/
 
 EXPOSE 80
 

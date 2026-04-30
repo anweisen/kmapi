@@ -2,7 +2,11 @@ package main
 
 import (
   "github.com/gofiber/fiber/v3"
+  "github.com/gofiber/fiber/v3/middleware/cors"
+  "github.com/gofiber/fiber/v3/middleware/static"
+  "golang.org/x/sync/singleflight"
   "kmapi/src/api/cache"
+  "kmapi/src/api/database"
   "kmapi/src/routes"
   "os"
 )
@@ -16,6 +20,12 @@ func main() {
   }
   server := fiber.New()
 
+  server.Use(cors.New(cors.Config{
+    AllowOrigins: []string{"*"},
+    AllowMethods: []string{"GET"},
+  }))
+
+  server.Get("/", static.New("./static"))
   server.Get("/by/gym/abi/next", handler.HandleGetByGymAbiNext)
   server.Get("/by/gym/abi/:year", handler.HandleGetByGymAbiYear)
 
