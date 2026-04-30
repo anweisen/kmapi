@@ -6,6 +6,7 @@ type ByAbiYearData struct {
   WrittenDates   []ByWrittenExamDate   `json:"written" bson:"written"`
   OralDates      []ByOralExamDate      `json:"oral" bson:"oral"`
   PracticalDates []ByPracticalExamDate `json:"practical" bson:"practical"`
+  ExtraExamDate  ByExtraExamDate       `json:"extra" bson:"extra"`
   GraduationDate ByGraduationDate      `json:"graduation" bson:"graduation"`
 }
 
@@ -31,6 +32,11 @@ type ByPracticalExamDate struct {
   StartDate     string `json:"start_date" bson:"start_date"`         // ISO 8601 format: YYYY-MM-DD
   FormattedDate string `json:"date_formatted" bson:"date_formatted"` // Original: "DDDD, DD. MMMM YYYY" ("Montag, den 26. Januar 2026")
   Subject       string `json:"subject" bson:"subject"`               // Name ("Sport", "Musik")
+}
+
+type ByExtraExamDate struct {
+  LastDate      string `json:"last_date" bson:"last_date"`           // ISO 8601 format: YYYY-MM-DD
+  FormattedDate string `json:"date_formatted" bson:"date_formatted"` // Original: "DDDD, DD. MMMM YYYY" ("Freitag, den 19. Juni 2026")
 }
 
 type ByGraduationDate struct {

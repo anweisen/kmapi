@@ -43,6 +43,7 @@ func ScrapeBavaria() (*ByScrapeData, error) {
       var writtenDates []api.ByWrittenExamDate
       var oralWeeks []api.ByOralExamDate
       var practicalDates []api.ByPracticalExamDate
+      var extraExamDate *api.ByExtraExamDate
       var graduationDate *api.ByGraduationDate
 
       elAbiCurrent.ForEach("p", func(_ int, elAbiCurrentP *colly.HTMLElement) {
@@ -219,6 +220,27 @@ func ScrapeBavaria() (*ByScrapeData, error) {
               })
 
             }
+          } else if strings.HasPrefix(text, "Die mündlichen Zusatzprüfungen") {
+            dateStartIndex := strings.Index(text, "bis spätestens")
+            if dateStartIndex < 0 {
+              // TODO
+            }
+            dateTextAndRemaining := text[dateStartIndex+len("bis spätestens "):]
+            dateParts := strings.SplitN(dateTextAndRemaining, " ", 6) // DDDD, den DD., MMMM, YYYY, x
+            if len(dateParts) < 6 {
+              // TODO
+            }
+
+            usableDateParts := dateParts[2:]
+            isoDate, err := ConvertGermanDateToIso(usableDateParts)
+            if err != nil {
+              // TODO
+            }
+
+            extraExamDate = &api.ByExtraExamDate{
+              LastDate:      isoDate,
+              FormattedDate: strings.Join(dateParts[:5], " "),
+            }
           }
 
           break
@@ -261,6 +283,7 @@ func ScrapeBavaria() (*ByScrapeData, error) {
           WrittenDates:   writtenDates,
           OralDates:      oralWeeks,
           PracticalDates: practicalDates,
+          ExtraExamDate:  *extraExamDate,
           GraduationDate: *graduationDate,
         }
       }
