@@ -88,24 +88,25 @@ func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData
   println("Cache miss for year", year)
 
   // perf: singleflight to prevent concurrent scrapes
-  result, err, _ := app.Singleflight.Do(api.KeyBavaria, func() (interface{}, error) {
+  // fix: don't fail on scrapeErr directly, if scrape fails: check db for archived data first
+  result, scrapeErr, _ := app.Singleflight.Do(api.KeyBavaria, func() (interface{}, error) {
     return ScrapeBavariaAndCacheArchive(app) // data, err
   })
 
-  if err != nil {
-    return nil, err
-  }
-
-  data := result.(*scraper.ByScrapeData)
-
-  abiData, exists := data.GymAbiYearData[year]
-  if exists {
-    return &abiData, nil
+  if scrapeErr == nil && result != nil {
+    data := result.(*scraper.ByScrapeData)
+    abiData, exists := data.GymAbiYearData[year]
+    if exists {
+      return &abiData, nil
+    }
   }
 
   // check db for archived data
   var archiveEntry database.ArchiveEntry[api.ByAbiYearData]
   err = app.Database.FindArchiveEntry(cacheKey, &archiveEntry)
+  if scrapeErr != nil && err != nil {
+    return nil, scrapeErr // scrape and db check failed -> return (first) scrape error, probably data not scraped yet and failed
+  }
   if errors.Is(err, mongo.ErrNoDocuments) {
     return nil, nil // 404
   }
