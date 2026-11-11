@@ -2,6 +2,7 @@ package routes
 
 import (
   "errors"
+  "fmt"
   "github.com/gofiber/fiber/v3"
   "go.mongodb.org/mongo-driver/v2/mongo"
   "kmapi/src/api"
@@ -37,7 +38,7 @@ func (app AppHandlerEmbed) HandleGetByGymAbiNext(ctx fiber.Ctx) error {
 
   currentYearData, err := GetBavariaAbiDataForYear(app, currentYear)
   if err != nil {
-    println("Error getting data for current year", currentYear, ":", err.Error)
+    println("Error getting data for current year", currentYear, ":", err.Error())
     return ctx.SendStatus(fiber.StatusInternalServerError)
   }
   if currentYearData != nil {
@@ -78,7 +79,7 @@ func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData
 
   err := app.Cache.GetJson(cacheKey, &cachedData)
   if err != nil {
-    return nil, err
+    return nil, fmt.Errorf("cache get %s: %w", cacheKey, err)
   }
   if cachedData != nil {
     println("Cache hit for year", year)
@@ -105,18 +106,18 @@ func GetBavariaAbiDataForYear(app AppHandlerEmbed, year int) (*api.ByAbiYearData
   var archiveEntry database.ArchiveEntry[api.ByAbiYearData]
   err = app.Database.FindArchiveEntry(cacheKey, &archiveEntry)
   if scrapeErr != nil && err != nil {
-    return nil, scrapeErr // scrape and db check failed -> return (first) scrape error, probably data not scraped yet and failed
+    return nil, fmt.Errorf("scrape: %w (archive lookup %s: %v)", scrapeErr, cacheKey, err) // scrape and db check failed, probably data not scraped yet
   }
   if errors.Is(err, mongo.ErrNoDocuments) {
     return nil, nil // 404
   }
   if err != nil {
-    return nil, err
+    return nil, fmt.Errorf("archive lookup %s: %w", cacheKey, err)
   }
 
   err = app.Cache.SetJson(cacheKey, &archiveEntry.Data) // cache archived data -> reduce database load
   if err != nil {
-    return nil, err
+    return nil, fmt.Errorf("cache set %s: %w", cacheKey, err)
   }
 
   return &archiveEntry.Data, nil
