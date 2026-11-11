@@ -12,7 +12,7 @@
 
 **Demo: [kmapi.anweisen.net](https://kmapi.anweisen.net)**
 
-This project is written in Golang and uses Redis for caching to reduce the scraping load.
+This project is written in Golang. It uses Redis for caching to reduce the scraping load and MongoDB as an archive that answers when the ministry website cannot be scraped.
 
 Because the API scrapes data from the official state ministry website, it will be subject to changes in the website's structure,
 which will temporarily affect the API's functionality, requiring updates to the scraping logic.
@@ -82,3 +82,24 @@ Source: *[www.km.bayern.de/termine/pruefungen-und-zeugnisse](https://www.km.baye
 | date           | string | Datum in ISO-8601 (YYYY-MM-DD) der Entlassung der Abiturienten und Abiturzeugnisausstellung (z.B. "2026-07-15") |
 | date_formatted | string | Original formatiertes Datum (z.B. "Freitag, den 26. Juni 2026")                                                 |
 
+## Self-Hosting
+
+[`compose.yaml`](compose.yaml) builds kmapi and starts it together with Redis (cache) and MongoDB (archive):
+
+```bash
+git clone https://github.com/anweisen/kmapi.git
+cd kmapi
+docker compose up -d
+```
+
+The API is then available at `http://localhost:8080`. Use `KMAPI_PORT=5000 docker compose up -d` for a different port.
+
+To run it without Compose, configure it through environment variables:
+
+| Variable  | Default | Description                                                     |
+|-----------|---------|-----------------------------------------------------------------|
+| BIND_ADDR | `:5000` | Address and port of the HTTP server                             |
+| REDIS_URL |         | Redis address as `host:port` (no `redis://` prefix)             |
+| REDIS_DB  | `0`     | Redis database number                                           |
+| MONGO_URI |         | MongoDB connection string; kmapi exits on start if unreachable  |
+| MONGO_DB  |         | Database name for the archive                                   |
